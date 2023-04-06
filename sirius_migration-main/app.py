@@ -1,27 +1,68 @@
-from flask import Flask, render_template, url_for, flash
-from flask import request, redirect
+import os
 import sqlite3
-from sqlite3 import Error
+
+from flask import Flask, render_template, request, g, flash, redirect, url_for
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import LoginManager, login_user, login_required
+from UserLogin import UserLogin
+
+from FDatabase import FDatabase
+
+# Configuration
+DATABASE = 'data.db'
+DEBUG = True
+SECRET_KEY = '`}>j&8D(T81q,L*-#}Jv$UWHOgvo~'
 
 app = Flask(__name__)
+app.config.from_object(__name__)
 
-con = sqlite3.connect("test.db", check_same_thread=False)
-cur = con.cursor()
+app.config.update(dict(DATABASE=os.path.join(app.root_path, 'data.db')))
 
-#cur.execute("DROP TABLE IF EXISTS users")
-cur.execute("""CREATE TABLE IF NOT EXISTS users(
-    userID INTEGER PRIMARY KEY AUTOINCREMENT,
-    username  TEXT NOT NULL,
-    password  TEXT)""")
-con.commit()
+login_manager = LoginManager(app)
 
 
-def addtotable(username, password):
-    cur.execute(f"SELECT username, password FROM users WHERE username = '{username}'")
-    if cur.fetchone() is None:
-        cur.execute(f"INSERT INTO users VALUES (NULL, ?, ?)", (username, password))
-        con.commit()
-        return True
+@login_manager.user_loader
+def load_user(id):
+    print('load_user')
+    return UserLogin().fromDB(id, dbase)
+
+
+def connect_db():
+    con = sqlite3.connect(app.config['DATABASE'])
+    con.row_factory = sqlite3.Row
+    return con
+
+
+def create_db():
+    db = connect_db()
+    with app.open_resource('sq_db.sql', mode='r') as f:
+        db.cursor().executescript(f.read())
+    db.commit()
+    db.close()
+
+
+def get_db():
+    # Linking db if not linked
+    if not hasattr(g, 'link_db'):
+        g.link_db = connect_db()
+    return g.link_db
+
+
+dbase = None
+
+
+@app.before_request
+def before_request():
+    global dbase
+    db = get_db()
+    dbase = FDatabase(db)
+
+
+@app.teardown_appcontext
+def close_db(error):
+    # Closing the link if linked
+    if hasattr(g, 'link_db'):
+        g.link_db.close()
 
 
 @app.route('/')
@@ -35,34 +76,37 @@ def about():
 
 
 @app.route('/user')
+@login_required
 def user():
-    username = str(request.args.get('username'))
-    password = str(request.args.get('password'))
-    return 'user page: ' + username + '-' + str(password)
+    return render_template('user.html')
 
 
-@app.route('/registration', methods=['get', 'post'])
-def reg():
-    if request.method == "POST":
-        username = str(request.form.get('username'))
-        password = str(request.form.get('password'))
-        res = addtotable(username, password)
-        if res:
-            flash("Вы успешно зарегестрировались!", "success")
-            return redirect(url_for('auth'))
+@app.route('/registration', methods=["POST", "GET"])
+def register():
+    if request.method == 'POST':
+        if len(request.form['email']) > 4 and len(request.form['psw']) > 4 and request.form['psw'] == request.form['psw2']:
+            hash = generate_password_hash(request.form['psw'])
+            res = dbase.addUser(request.form['email'], hash)
+            if res:
+                flash('Вы успешно зарегестрировались!', 'success')
+                return redirect(url_for('login'))
+            else:
+                flash('Ошибка при добавлении в базу данных', 'error')
         else:
-            flash("Ошибка при добавлении в базу!", "error")
-    return render_template("registration.html")
+            flash('Неверно заполнены поля!', 'error')
+    return render_template('registration.html')
 
 
-@app.route('/auth', methods=['get', 'post'])
-def auth():
-    if request.method == "POST":
-        username = str(request.form.get('username'))
-        password = str(request.form.get('password'))
-        return render_template('user.html', username=username, password=password)
-    elif request.method == "GET":
-        return render_template('auth.html')
+@app.route('/login', methods=["POST", "GET"])
+def login():
+    if request.method == 'POST':
+        user = dbase.getUserByEmail(request.form['email'])
+        if user and check_password_hash(user['password'], request.form['psw']):
+            userlogin = UserLogin().create(user)
+            login_user(userlogin)
+            return redirect(url_for(user))
+        flash("Неверная пара логин/пароль", 'error')
+    return render_template('login.html')
 
 
 if __name__ == '__main__':
