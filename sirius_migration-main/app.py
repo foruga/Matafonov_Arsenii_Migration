@@ -13,9 +13,9 @@ DATABASE = 'data.db'
 DEBUG = True
 SECRET_KEY = '`}>j&8D(T81q,L*-#}Jv$UWHOgvo~'
 
+
 app = Flask(__name__)
 app.config.from_object(__name__)
-
 app.config.update(dict(DATABASE=os.path.join(app.root_path, 'data.db')))
 
 login_manager = LoginManager(app)
@@ -81,6 +81,30 @@ def user():
     return render_template('user.html')
 
 
+@app.route('/soiskatel')
+@login_required
+def soiskatel():
+    return render_template('soiskatel.html')
+
+
+@app.route('/choose')
+@login_required
+def choose():
+    return render_template('choose.html')
+
+
+@app.route('/poisk_vakansii')
+@login_required
+def poisk_vakansii():
+    return render_template('poisk_vakansii.html')
+
+
+@app.route('/map')
+@login_required
+def map():
+    return render_template('map.html')
+
+
 @app.route('/registration', methods=["POST", "GET"])
 def register():
     if request.method == 'POST':
@@ -104,7 +128,7 @@ def login():
         if user and check_password_hash(user['password'], request.form['psw']):
             userlogin = UserLogin().create(user)
             login_user(userlogin)
-            return redirect(url_for(user))
+            return redirect(url_for('choose'))
         flash("Неверная пара логин/пароль", 'error')
     return render_template('login.html')
 

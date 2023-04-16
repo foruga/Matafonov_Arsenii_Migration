@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Страница о разработчике
+{% endblock %}
+{% block body %}
+<right><pre>    <a href="/soiskatel"><font color="#000000"><h5>Вернуться к заполнению анкеты</h5></font></a></pre></pre></right><center><h3>Анкета соискателя</h3></center>
+<center><h4>Шаг 2. Выберите отрасль и специализацию</h4></center>
+<br>
+<center><h5>Выберите отрасль</h5></center>
+<center><p><input type="search" list="otrasl">
+  <datalist id="otrasl">
+    <option value="1"></option>
+    <option value="2"></option>
+    <option value="3"></option>
+   </datalist></p></center><br><br><br><br>
+<center><h5>Выберите специализацию</h5></center>
+<center><p><input type="search" list="specialisation">
+  <datalist id="specialisation">
+    <option value="1"></option>
+    <option value="2"></option>
+    <option value="3"></option>
+   </datalist></p></center><br><br><br><br>
+<center><h4>Шаг 3. Выберите вакансию</h4></center>
+<center><p><input type="search" list="vakansia">
+  <datalist id="vakansia">
+    <option value="1"></option>
+    <option value="2"></option>
+    <option value="Sasha botick v brawl stars"></option>
+   </datalist></p></center><br>
+
+{% endblock %}
